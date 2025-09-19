@@ -14,7 +14,195 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      alert_logs: {
+        Row: {
+          alert_level: string
+          alert_type: string
+          created_at: string
+          id: number
+          is_resolved: boolean | null
+          message: string
+          resolved_at: string | null
+          water_source_id: number | null
+        }
+        Insert: {
+          alert_level: string
+          alert_type: string
+          created_at?: string
+          id?: number
+          is_resolved?: boolean | null
+          message: string
+          resolved_at?: string | null
+          water_source_id?: number | null
+        }
+        Update: {
+          alert_level?: string
+          alert_type?: string
+          created_at?: string
+          id?: number
+          is_resolved?: boolean | null
+          message?: string
+          resolved_at?: string | null
+          water_source_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alert_logs_water_source_id_fkey"
+            columns: ["water_source_id"]
+            isOneToOne: false
+            referencedRelation: "water_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      risk_predictions: {
+        Row: {
+          confidence: number | null
+          created_at: string
+          id: number
+          model_version: string | null
+          prediction_data: Json | null
+          risk_level: string
+          water_source_id: number | null
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string
+          id?: number
+          model_version?: string | null
+          prediction_data?: Json | null
+          risk_level: string
+          water_source_id?: number | null
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string
+          id?: number
+          model_version?: string | null
+          prediction_data?: Json | null
+          risk_level?: string
+          water_source_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_predictions_water_source_id_fkey"
+            columns: ["water_source_id"]
+            isOneToOne: false
+            referencedRelation: "water_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sensor_readings: {
+        Row: {
+          bacterial_count: number | null
+          chlorine_level: number | null
+          created_at: string
+          dissolved_oxygen: number | null
+          id: number
+          location: string
+          ph_level: number | null
+          temperature: number | null
+          turbidity: number | null
+          water_source_id: number | null
+        }
+        Insert: {
+          bacterial_count?: number | null
+          chlorine_level?: number | null
+          created_at?: string
+          dissolved_oxygen?: number | null
+          id?: number
+          location: string
+          ph_level?: number | null
+          temperature?: number | null
+          turbidity?: number | null
+          water_source_id?: number | null
+        }
+        Update: {
+          bacterial_count?: number | null
+          chlorine_level?: number | null
+          created_at?: string
+          dissolved_oxygen?: number | null
+          id?: number
+          location?: string
+          ph_level?: number | null
+          temperature?: number | null
+          turbidity?: number | null
+          water_source_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sensor_readings_water_source_id_fkey"
+            columns: ["water_source_id"]
+            isOneToOne: false
+            referencedRelation: "water_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_profiles: {
+        Row: {
+          created_at: string
+          full_name: string | null
+          id: number
+          organization: string | null
+          phone_number: string | null
+          role: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          full_name?: string | null
+          id?: number
+          organization?: string | null
+          phone_number?: string | null
+          role?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          full_name?: string | null
+          id?: number
+          organization?: string | null
+          phone_number?: string | null
+          role?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      water_sources: {
+        Row: {
+          created_at: string
+          id: number
+          latitude: number | null
+          location: string
+          longitude: number | null
+          name: string
+          source_type: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          latitude?: number | null
+          location: string
+          longitude?: number | null
+          name: string
+          source_type?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          latitude?: number | null
+          location?: string
+          longitude?: number | null
+          name?: string
+          source_type?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

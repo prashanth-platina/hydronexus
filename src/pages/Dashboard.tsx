@@ -77,42 +77,45 @@ const Dashboard = () => {
     try {
       setLoading(true);
       
-      // Fetch sample data since tables might be empty
-      const mockSensorData: SensorReading[] = [
-        {
-          id: 1,
-          ph_level: 7.2,
-          turbidity: 2.1,
-          temperature: 24.5,
-          bacterial_count: 10,
-          location: 'Community Well A',
-          created_at: new Date().toISOString()
-        },
-        {
-          id: 2,
-          ph_level: 6.8,
-          turbidity: 1.8,
-          temperature: 23.8,
-          bacterial_count: 15,
-          location: 'Borehole B',
-          created_at: new Date(Date.now() - 3600000).toISOString()
-        }
-      ];
+      // Fetch real data from Supabase
+      const [sensorsResponse, sourcesResponse, predictionsResponse] = await Promise.all([
+        supabase.from('sensor_readings').select('*').order('created_at', { ascending: false }).limit(10),
+        supabase.from('water_sources').select('*').order('created_at', { ascending: false }),
+        supabase.from('risk_predictions').select('*').order('created_at', { ascending: false }).limit(5)
+      ]);
 
-      const mockWaterSources: WaterSource[] = [
-        { id: 1, name: 'Community Well A', location: 'Sector 1', status: 'active', created_at: new Date().toISOString() },
-        { id: 2, name: 'Borehole B', location: 'Sector 2', status: 'active', created_at: new Date().toISOString() },
-        { id: 3, name: 'Hand Pump C', location: 'Sector 3', status: 'maintenance', created_at: new Date().toISOString() }
-      ];
+      if (sensorsResponse.error) {
+        console.error('Error fetching sensor data:', sensorsResponse.error);
+        toast({
+          title: "Error",
+          description: "Failed to load sensor data",
+          variant: "destructive",
+        });
+      } else {
+        setSensorData(sensorsResponse.data || []);
+      }
 
-      const mockRiskPredictions: RiskPrediction[] = [
-        { id: 1, risk_level: 'low', confidence: 85, prediction_data: {}, created_at: new Date().toISOString() },
-        { id: 2, risk_level: 'medium', confidence: 72, prediction_data: {}, created_at: new Date().toISOString() }
-      ];
+      if (sourcesResponse.error) {
+        console.error('Error fetching water sources:', sourcesResponse.error);
+        toast({
+          title: "Error", 
+          description: "Failed to load water sources",
+          variant: "destructive",
+        });
+      } else {
+        setWaterSources(sourcesResponse.data || []);
+      }
 
-      setSensorData(mockSensorData);
-      setWaterSources(mockWaterSources);
-      setRiskPredictions(mockRiskPredictions);
+      if (predictionsResponse.error) {
+        console.error('Error fetching risk predictions:', predictionsResponse.error);
+        toast({
+          title: "Error",
+          description: "Failed to load risk predictions", 
+          variant: "destructive",
+        });
+      } else {
+        setRiskPredictions(predictionsResponse.data || []);
+      }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       toast({
