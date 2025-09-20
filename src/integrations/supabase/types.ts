@@ -55,6 +55,33 @@ export type Database = {
           },
         ]
       }
+      cummunity_reports: {
+        Row: {
+          created_at: string
+          id: number
+          notes: string | null
+          report_description: string | null
+          reported_by: string | null
+          severity: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          notes?: string | null
+          report_description?: string | null
+          reported_by?: string | null
+          severity?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          notes?: string | null
+          report_description?: string | null
+          reported_by?: string | null
+          severity?: string | null
+        }
+        Relationships: []
+      }
       risk_predictions: {
         Row: {
           confidence: number | null
@@ -102,6 +129,7 @@ export type Database = {
           id: number
           location: string
           ph_level: number | null
+          tds: number | null
           temperature: number | null
           turbidity: number | null
           water_source_id: number | null
@@ -114,6 +142,7 @@ export type Database = {
           id?: number
           location: string
           ph_level?: number | null
+          tds?: number | null
           temperature?: number | null
           turbidity?: number | null
           water_source_id?: number | null
@@ -126,6 +155,7 @@ export type Database = {
           id?: number
           location?: string
           ph_level?: number | null
+          tds?: number | null
           temperature?: number | null
           turbidity?: number | null
           water_source_id?: number | null

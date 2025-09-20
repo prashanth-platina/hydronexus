@@ -4,6 +4,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SensorReading, WaterSource, RiskPrediction, CommunityReport, AlertLog } from "@/types/database";
+import ManualDataEntry from "@/components/ManualDataEntry";
+import CommunityReportForm from "@/components/CommunityReportForm";
+import WaterMap from "@/components/WaterMap";
+import EnhancedWaterQualityChart from "@/components/EnhancedWaterQualityChart";
+import SourceComparison from "@/components/SourceComparison";
+import HistoricalData from "@/components/HistoricalData";
 import { 
   Droplets, 
   AlertTriangle, 
@@ -14,44 +23,25 @@ import {
   MapPin,
   LogOut,
   Bell,
-  Settings
+  Settings,
+  Plus,
+  BarChart3,
+  Map,
+  Filter
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import WaterQualityChart from '@/components/WaterQualityChart';
 import RiskIndicator from '@/components/RiskIndicator';
 import { User } from '@supabase/supabase-js';
 
-interface SensorReading {
-  id: number;
-  ph_level: number;
-  turbidity: number;
-  temperature: number;
-  bacterial_count: number;
-  location: string;
-  created_at: string;
-}
-
-interface WaterSource {
-  id: number;
-  name: string;
-  location: string;
-  status: string;
-  created_at: string;
-}
-
-interface RiskPrediction {
-  id: number;
-  risk_level: string;
-  confidence: number;
-  prediction_data: any;
-  created_at: string;
-}
-
 const Dashboard = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [sensorData, setSensorData] = useState<SensorReading[]>([]);
+  const [sensorReadings, setSensorReadings] = useState<SensorReading[]>([]);
   const [waterSources, setWaterSources] = useState<WaterSource[]>([]);
   const [riskPredictions, setRiskPredictions] = useState<RiskPrediction[]>([]);
+  const [communityReports, setCommunityReports] = useState<CommunityReport[]>([]);
+  const [selectedSourceFilter, setSelectedSourceFilter] = useState<string>('all');
+  const [currentView, setCurrentView] = useState<'charts' | 'map'>('charts');
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -70,57 +60,47 @@ const Dashboard = () => {
   useEffect(() => {
     if (user) {
       fetchDashboardData();
+      setupRealtimeSubscriptions();
     }
   }, [user]);
+
+  const setupRealtimeSubscriptions = () => {
+    const sensorChannel = supabase
+      .channel('sensor-readings-changes')
+      .on('postgres_changes', 
+        { event: 'INSERT', schema: 'public', table: 'sensor_readings' },
+        (payload) => {
+          setSensorReadings(prev => [payload.new as SensorReading, ...prev].slice(0, 100));
+          toast({ title: "New Reading", description: `New data at ${(payload.new as SensorReading).location}` });
+        }
+      )
+      .subscribe();
+  };
 
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      
-      // Fetch real data from Supabase
-      const [sensorsResponse, sourcesResponse, predictionsResponse] = await Promise.all([
-        supabase.from('sensor_readings').select('*').order('created_at', { ascending: false }).limit(10),
-        supabase.from('water_sources').select('*').order('created_at', { ascending: false }),
-        supabase.from('risk_predictions').select('*').order('created_at', { ascending: false }).limit(5)
+      const [sensorsResponse, sourcesResponse, risksResponse, reportsResponse] = await Promise.all([
+        supabase.from('sensor_readings').select('*').order('created_at', { ascending: false }).limit(100),
+        supabase.from('water_sources').select('*').order('name'),
+        supabase.from('risk_predictions').select('*').order('created_at', { ascending: false }).limit(20),
+        supabase.from('cummunity_reports').select('*').order('created_at', { ascending: false }).limit(20)
       ]);
 
-      if (sensorsResponse.error) {
-        console.error('Error fetching sensor data:', sensorsResponse.error);
-        toast({
-          title: "Error",
-          description: "Failed to load sensor data",
-          variant: "destructive",
-        });
-      } else {
-        setSensorData(sensorsResponse.data || []);
-      }
+      if (sensorsResponse.error) throw sensorsResponse.error;
+      if (sourcesResponse.error) throw sourcesResponse.error;
+      if (risksResponse.error) throw risksResponse.error;
+      if (reportsResponse.error) throw reportsResponse.error;
 
-      if (sourcesResponse.error) {
-        console.error('Error fetching water sources:', sourcesResponse.error);
-        toast({
-          title: "Error", 
-          description: "Failed to load water sources",
-          variant: "destructive",
-        });
-      } else {
-        setWaterSources(sourcesResponse.data || []);
-      }
-
-      if (predictionsResponse.error) {
-        console.error('Error fetching risk predictions:', predictionsResponse.error);
-        toast({
-          title: "Error",
-          description: "Failed to load risk predictions", 
-          variant: "destructive",
-        });
-      } else {
-        setRiskPredictions(predictionsResponse.data || []);
-      }
+      setSensorReadings(sensorsResponse.data || []);
+      setWaterSources(sourcesResponse.data || []);
+      setRiskPredictions(risksResponse.data || []);
+      setCommunityReports(reportsResponse.data || []);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       toast({
         title: "Error",
-        description: "Failed to load dashboard data",
+        description: "Failed to load dashboard data.",
         variant: "destructive",
       });
     } finally {
@@ -130,53 +110,23 @@ const Dashboard = () => {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    toast({
-      title: "Logged out",
-      description: "You have been successfully logged out.",
-    });
+    navigate('/');
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'active':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'maintenance':
-        return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
-      default:
-        return <XCircle className="h-4 w-4 text-red-500" />;
-    }
-  };
+  const filteredSensorReadings = selectedSourceFilter === 'all' 
+    ? sensorReadings 
+    : sensorReadings.filter(reading => reading.water_source_id?.toString() === selectedSourceFilter);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'bg-green-500/10 text-green-700 border-green-200';
-      case 'maintenance':
-        return 'bg-yellow-500/10 text-yellow-700 border-yellow-200';
-      default:
-        return 'bg-red-500/10 text-red-700 border-red-200';
-    }
-  };
-
-  const getRiskColor = (risk: string) => {
-    switch (risk) {
-      case 'low':
-        return 'bg-green-500/10 text-green-700 border-green-200';
-      case 'medium':
-        return 'bg-yellow-500/10 text-yellow-700 border-yellow-200';
-      case 'high':
-        return 'bg-red-500/10 text-red-700 border-red-200';
-      default:
-        return 'bg-gray-500/10 text-gray-700 border-gray-200';
-    }
-  };
+  const totalSources = waterSources.length;
+  const activeSources = waterSources.filter(source => source.status === 'active').length;
+  const recentReadings = filteredSensorReadings.slice(0, 10);
 
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <Droplets className="h-12 w-12 text-primary animate-pulse mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading dashboard...</p>
+          <Droplets className="h-12 w-12 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-lg">Loading dashboard...</p>
         </div>
       </div>
     );
@@ -185,181 +135,211 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+      <header className="bg-card border-b border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center gap-2">
               <Droplets className="h-8 w-8 text-primary" />
-              <div>
-                <h1 className="text-2xl font-bold text-foreground">AquaGuard Dashboard</h1>
-                <p className="text-sm text-muted-foreground">Smart Community Water Monitoring</p>
-              </div>
+              <h1 className="text-2xl font-bold text-foreground">AquaGuard Dashboard</h1>
             </div>
-            <div className="flex items-center space-x-4">
-              <Button variant="ghost" size="sm">
+            
+            <div className="flex items-center gap-4">
+              <Select value={selectedSourceFilter} onValueChange={setSelectedSourceFilter}>
+                <SelectTrigger className="w-48">
+                  <Filter className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Filter by source" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Sources</SelectItem>
+                  {waterSources.map((source) => (
+                    <SelectItem key={source.id} value={source.id.toString()}>
+                      {source.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              <Button variant="outline" onClick={() => navigate('/data-entry')}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Reading
+              </Button>
+              
+              <Button variant="outline" size="icon">
                 <Bell className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="sm">
+              <Button variant="outline" size="icon">
                 <Settings className="h-4 w-4" />
               </Button>
-              <Button variant="outline" size="sm" onClick={handleLogout}>
+              <Button variant="outline" onClick={handleLogout}>
                 <LogOut className="h-4 w-4 mr-2" />
                 Logout
               </Button>
             </div>
           </div>
         </div>
-      </div>
+      </header>
 
-      <div className="container mx-auto px-4 py-8">
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Water Sources</CardTitle>
-              <MapPin className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{waterSources.length}</div>
-              <p className="text-xs text-muted-foreground">Active monitoring points</p>
-            </CardContent>
-          </Card>
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="space-y-8">
+          {/* Stats Overview */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Sources</CardTitle>
+                <Droplets className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{totalSources}</div>
+                <p className="text-xs text-muted-foreground">Water monitoring points</p>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Sources</CardTitle>
-              <CheckCircle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">
-                {waterSources.filter(s => s.status === 'active').length}
-              </div>
-              <p className="text-xs text-muted-foreground">Currently operational</p>
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Active Sources</CardTitle>
+                <CheckCircle className="h-4 w-4 text-green-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{activeSources}</div>
+                <p className="text-xs text-muted-foreground">Currently operational</p>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Risk Level</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">Medium</div>
-              <p className="text-xs text-muted-foreground">Overall community risk</p>
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Community Reports</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{communityReports.length}</div>
+                <p className="text-xs text-muted-foreground">Recent reports</p>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Recent Readings</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{sensorData.length}</div>
-              <p className="text-xs text-muted-foreground">In the last 24 hours</p>
-            </CardContent>
-          </Card>
-        </div>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Recent Readings</CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{recentReadings.length}</div>
+                <p className="text-xs text-muted-foreground">Last 24 hours</p>
+              </CardContent>
+            </Card>
+          </div>
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Water Quality Chart */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>Water Quality Trend</CardTitle>
-              <CardDescription>Real-time sensor data visualization</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <WaterQualityChart data={sensorData} />
-            </CardContent>
-          </Card>
+          {/* Main Dashboard Tabs */}
+          <Tabs defaultValue="overview" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-6">
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="trends">Trends</TabsTrigger>
+              <TabsTrigger value="map">Map</TabsTrigger>
+              <TabsTrigger value="comparison">Compare</TabsTrigger>
+              <TabsTrigger value="historical">Historical</TabsTrigger>
+              <TabsTrigger value="reports">Reports</TabsTrigger>
+            </TabsList>
 
-          {/* Risk Assessment */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Risk Assessment</CardTitle>
-              <CardDescription>AI-powered health risk predictions</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {riskPredictions.map((prediction) => (
-                <RiskIndicator
-                  key={prediction.id}
-                  level={prediction.risk_level}
-                  confidence={prediction.confidence}
-                />
-              ))}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Water Sources Status */}
-        <div className="mt-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>Water Sources Status</CardTitle>
-              <CardDescription>Current status of all monitoring points</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {waterSources.map((source) => (
-                  <div key={source.id} className="p-4 border rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-semibold">{source.name}</h3>
-                      {getStatusIcon(source.status)}
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-2">{source.location}</p>
-                    <Badge className={getStatusColor(source.status)}>
-                      {source.status}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Recent Sensor Readings */}
-        <div className="mt-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Sensor Readings</CardTitle>
-              <CardDescription>Latest water quality measurements</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {sensorData.map((reading) => (
-                  <div key={reading.id} className="p-4 border rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-semibold">{reading.location}</h3>
-                      <span className="text-sm text-muted-foreground">
-                        {new Date(reading.created_at).toLocaleTimeString()}
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">pH Level:</span>
-                        <span className="ml-1 font-medium">{reading.ph_level}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Turbidity:</span>
-                        <span className="ml-1 font-medium">{reading.turbidity} NTU</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Temperature:</span>
-                        <span className="ml-1 font-medium">{reading.temperature}°C</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Bacteria:</span>
-                        <span className="ml-1 font-medium">{reading.bacterial_count} CFU/ml</span>
+            <TabsContent value="overview" className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <div className="flex justify-between items-center">
+                      <CardTitle>Real-time Data View</CardTitle>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant={currentView === 'charts' ? 'default' : 'outline'} 
+                          size="sm"
+                          onClick={() => setCurrentView('charts')}
+                        >
+                          <BarChart3 className="h-4 w-4 mr-1" />
+                          Charts
+                        </Button>
+                        <Button 
+                          variant={currentView === 'map' ? 'default' : 'outline'} 
+                          size="sm"
+                          onClick={() => setCurrentView('map')}
+                        >
+                          <Map className="h-4 w-4 mr-1" />
+                          Map
+                        </Button>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  </CardHeader>
+                  <CardContent>
+                    {currentView === 'charts' ? (
+                      <WaterQualityChart data={sensorReadings} />
+                    ) : (
+                      <WaterMap waterSources={waterSources} sensorReadings={sensorReadings} />
+                    )}
+                  </CardContent>
+                </Card>
+
+                <div className="space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Risk Predictions</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {riskPredictions.slice(0, 3).map((prediction) => (
+                        <RiskIndicator
+                          key={prediction.id}
+                          level={prediction.risk_level}
+                          confidence={prediction.confidence || 0}
+                          title={`Prediction #${prediction.id}`}
+                        />
+                      ))}
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Recent Community Reports</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {communityReports.slice(0, 3).map((report) => (
+                        <div key={report.id} className="flex items-start gap-3 p-3 bg-muted rounded-lg">
+                          <AlertTriangle className="h-4 w-4 text-yellow-600 mt-1" />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium">{report.reported_by}</p>
+                            <p className="text-xs text-muted-foreground">{report.report_description}</p>
+                            <Badge variant="outline" className="mt-1">
+                              {report.severity}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
-            </CardContent>
-          </Card>
+            </TabsContent>
+
+            <TabsContent value="trends">
+              <EnhancedWaterQualityChart data={sensorReadings} waterSources={waterSources} />
+            </TabsContent>
+
+            <TabsContent value="map">
+              <WaterMap waterSources={waterSources} sensorReadings={sensorReadings} />
+            </TabsContent>
+
+            <TabsContent value="comparison">
+              <SourceComparison sensorReadings={sensorReadings} waterSources={waterSources} />
+            </TabsContent>
+
+            <TabsContent value="historical">
+              <HistoricalData sensorReadings={sensorReadings} waterSources={waterSources} />
+            </TabsContent>
+
+            <TabsContent value="reports" className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <ManualDataEntry onDataSubmitted={fetchDashboardData} />
+                <CommunityReportForm onReportSubmitted={fetchDashboardData} />
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
-      </div>
+      </main>
     </div>
   );
 };
