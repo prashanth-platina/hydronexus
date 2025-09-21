@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "esModuleInterop": true,
+    "lib": ["esnext", "dom"],
+    "module": "esnext",
+    "moduleResolution": "node",
+    "noEmit": true,
+    "strict": true,
+    "target": "esnext",
+    "paths": {
+      "https://deno.land/std@0.168.0/*": ["./node_modules/@types/deno-std/*"],
+      "https://deno.land/x/*": ["./node_modules/@types/deno-x/*"]
+    }
+  },
+  "include": ["*.ts"]
+}
