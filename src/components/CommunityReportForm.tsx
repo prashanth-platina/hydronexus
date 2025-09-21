@@ -36,6 +36,18 @@ const CommunityReportForm: React.FC<CommunityReportFormProps> = ({ onReportSubmi
 
     setIsSubmitting(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast({
+          title: "Authentication Required",
+          description: "Please log in to submit a report.",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
       const { error } = await supabase
         .from('cummunity_reports')
         .insert({
@@ -45,7 +57,10 @@ const CommunityReportForm: React.FC<CommunityReportFormProps> = ({ onReportSubmi
           notes: formData.notes
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error submitting report:', error);
+        throw error;
+      }
 
       toast({
         title: "Report Submitted",

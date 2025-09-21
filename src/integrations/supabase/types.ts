@@ -129,7 +129,7 @@ export type Database = {
           id: number
           location: string
           ph_level: number | null
-          tds: number | null
+          tds_level: number | null
           temperature: number | null
           turbidity: number | null
           water_source_id: number | null
@@ -142,7 +142,7 @@ export type Database = {
           id?: number
           location: string
           ph_level?: number | null
-          tds?: number | null
+          tds_level?: number | null
           temperature?: number | null
           turbidity?: number | null
           water_source_id?: number | null
@@ -155,7 +155,7 @@ export type Database = {
           id?: number
           location?: string
           ph_level?: number | null
-          tds?: number | null
+          tds_level?: number | null
           temperature?: number | null
           turbidity?: number | null
           water_source_id?: number | null

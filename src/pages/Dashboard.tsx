@@ -9,7 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { SensorReading, WaterSource, RiskPrediction, CommunityReport, AlertLog } from "@/types/database";
 import ManualDataEntry from "@/components/ManualDataEntry";
 import CommunityReportForm from "@/components/CommunityReportForm";
-import WaterMap from "@/components/WaterMap";
+import LeafletMap from "@/components/LeafletMap";
+import AIWaterAnalysis from "@/components/AIWaterAnalysis";
+import ProfileDropdown from "@/components/ProfileDropdown";
 import EnhancedWaterQualityChart from "@/components/EnhancedWaterQualityChart";
 import SourceComparison from "@/components/SourceComparison";
 import HistoricalData from "@/components/HistoricalData";
@@ -42,6 +44,7 @@ const Dashboard = () => {
   const [communityReports, setCommunityReports] = useState<CommunityReport[]>([]);
   const [selectedSourceFilter, setSelectedSourceFilter] = useState<string>('all');
   const [currentView, setCurrentView] = useState<'charts' | 'map'>('charts');
+  const [isMapFullScreen, setIsMapFullScreen] = useState(false);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -108,10 +111,6 @@ const Dashboard = () => {
     }
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate('/');
-  };
 
   const filteredSensorReadings = selectedSourceFilter === 'all' 
     ? sensorReadings 
@@ -159,21 +158,11 @@ const Dashboard = () => {
                 </SelectContent>
               </Select>
               
-              <Button variant="outline" onClick={() => navigate('/data-entry')}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Reading
-              </Button>
-              
               <Button variant="outline" size="icon">
                 <Bell className="h-4 w-4" />
               </Button>
-              <Button variant="outline" size="icon">
-                <Settings className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" onClick={handleLogout}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
-              </Button>
+              
+              <ProfileDropdown user={user!} />
             </div>
           </div>
         </div>
@@ -231,12 +220,13 @@ const Dashboard = () => {
 
           {/* Main Dashboard Tabs */}
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-6">
+            <TabsList className="grid w-full grid-cols-7">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="trends">Trends</TabsTrigger>
               <TabsTrigger value="map">Map</TabsTrigger>
               <TabsTrigger value="comparison">Compare</TabsTrigger>
               <TabsTrigger value="historical">Historical</TabsTrigger>
+              <TabsTrigger value="ai-analysis">AI Analysis</TabsTrigger>
               <TabsTrigger value="reports">Reports</TabsTrigger>
             </TabsList>
 
@@ -270,7 +260,12 @@ const Dashboard = () => {
                     {currentView === 'charts' ? (
                       <WaterQualityChart data={sensorReadings} />
                     ) : (
-                      <WaterMap waterSources={waterSources} sensorReadings={sensorReadings} />
+                      <LeafletMap 
+                        waterSources={waterSources} 
+                        sensorReadings={sensorReadings}
+                        isFullScreen={isMapFullScreen}
+                        onToggleFullScreen={() => setIsMapFullScreen(!isMapFullScreen)}
+                      />
                     )}
                   </CardContent>
                 </Card>
@@ -320,7 +315,12 @@ const Dashboard = () => {
             </TabsContent>
 
             <TabsContent value="map">
-              <WaterMap waterSources={waterSources} sensorReadings={sensorReadings} />
+              <LeafletMap 
+                waterSources={waterSources} 
+                sensorReadings={sensorReadings}
+                isFullScreen={isMapFullScreen}
+                onToggleFullScreen={() => setIsMapFullScreen(!isMapFullScreen)}
+              />
             </TabsContent>
 
             <TabsContent value="comparison">
@@ -329,6 +329,10 @@ const Dashboard = () => {
 
             <TabsContent value="historical">
               <HistoricalData sensorReadings={sensorReadings} waterSources={waterSources} />
+            </TabsContent>
+
+            <TabsContent value="ai-analysis">
+              <AIWaterAnalysis sensorReadings={sensorReadings} />
             </TabsContent>
 
             <TabsContent value="reports" className="space-y-6">
