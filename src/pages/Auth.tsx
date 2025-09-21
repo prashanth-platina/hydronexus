@@ -98,7 +98,7 @@ const Auth = () => {
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
             <Droplets className="h-12 w-12 text-primary mr-2" />
-            <h1 className="text-3xl font-bold text-foreground">AquaGuard</h1>
+            <h1 className="text-3xl font-bold text-foreground">HydroNexus</h1>
           </div>
           <p className="text-muted-foreground">Smart Community Water Monitoring</p>
         </div>

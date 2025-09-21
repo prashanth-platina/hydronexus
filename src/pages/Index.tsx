@@ -12,7 +12,7 @@ const Index = () => {
         <div className="text-center mb-16">
           <div className="flex items-center justify-center mb-6">
             <Droplets className="h-16 w-16 text-primary mr-4" />
-            <h1 className="text-5xl font-bold text-foreground">AquaGuard</h1>
+            <h1 className="text-5xl font-bold text-foreground">HydroNexus</h1>
           </div>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
             Smart Community Water Monitoring System - Protecting public health through 

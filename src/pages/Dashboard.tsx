@@ -139,7 +139,7 @@ const Dashboard = () => {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-2">
               <Droplets className="h-8 w-8 text-primary" />
-              <h1 className="text-2xl font-bold text-foreground">AquaGuard Dashboard</h1>
+              <h1 className="text-2xl font-bold text-foreground">HydroNexus Dashboard</h1>
             </div>
             
             <div className="flex items-center gap-4">
