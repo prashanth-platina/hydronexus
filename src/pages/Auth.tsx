@@ -18,17 +18,16 @@ const Auth = () => {
   const [loginData, setLoginData] = useState({ email: '', password: '' });
   const [signupData, setSignupData] = useState({ email: '', password: '', confirmPassword: '', fullName: '' });
 
+  // redirect if already logged in
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        navigate('/dashboard');
-      }
+      if (session) navigate('/dashboard');
     });
-
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  // handle login
+  const handleLogin = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
@@ -50,11 +49,13 @@ const Auth = () => {
         title: "Welcome back!",
         description: "Successfully logged in.",
       });
+      navigate('/dashboard');
     }
     setIsLoading(false);
   };
 
-  const handleSignup = async (e: React.FormEvent) => {
+  // handle signup
+  const handleSignup = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
@@ -70,10 +71,8 @@ const Auth = () => {
       password: signupData.password,
       options: {
         emailRedirectTo: `${window.location.origin}/dashboard`,
-        data: {
-          full_name: signupData.fullName,
-        }
-      }
+        data: { full_name: signupData.fullName },
+      },
     });
 
     if (error) {
@@ -90,6 +89,19 @@ const Auth = () => {
       });
     }
     setIsLoading(false);
+  };
+
+  // 👇 Auto-fill + Auto-login handler
+  const handleDemoLogin = () => {
+    setLoginData({ email: 'user@gmail.com', password: 'user' });
+    toast({
+      title: "Demo account selected",
+      description: "Logging in with demo credentials...",
+    });
+    // wait a moment before submitting
+    setTimeout(() => {
+      handleLogin({ preventDefault: () => {} });
+    }, 1000);
   };
 
   return (
@@ -110,13 +122,15 @@ const Auth = () => {
               Monitor water quality and health risks in your community
             </CardDescription>
           </CardHeader>
+
           <CardContent>
             <Tabs defaultValue="login" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Login</TabsTrigger>
                 <TabsTrigger value="signup">Sign Up</TabsTrigger>
               </TabsList>
-              
+
+              {/* ---------- LOGIN TAB ---------- */}
               <TabsContent value="login">
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
@@ -124,7 +138,7 @@ const Auth = () => {
                     <Input
                       id="login-email"
                       type="email"
-                      placeholder="for demo try:-'user@email.com'"
+                      placeholder="Enter your email"
                       value={loginData.email}
                       onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
                       required
@@ -135,7 +149,7 @@ const Auth = () => {
                     <Input
                       id="login-password"
                       type="password"
-                      placeholder="for demo  try:- 'user'"
+                      placeholder="Enter your password"
                       value={loginData.password}
                       onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
                       required
@@ -144,9 +158,21 @@ const Auth = () => {
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? 'Signing In...' : 'Sign In'}
                   </Button>
+
+                  {/* 👇 Auto-fill + Auto-login button */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleDemoLogin}
+                    disabled={isLoading}
+                  >
+                    Use Demo Account
+                  </Button>
                 </form>
               </TabsContent>
-              
+
+              {/* ---------- SIGNUP TAB ---------- */}
               <TabsContent value="signup">
                 <form onSubmit={handleSignup} className="space-y-4">
                   <div className="space-y-2">
@@ -195,6 +221,14 @@ const Auth = () => {
                   </Button>
                 </form>
               </TabsContent>
+
+              {/* ---------- INFO ALERT ---------- */}
+              <Alert className="mt-4 border-primary/30 bg-primary/5">
+                <AlertCircle className="h-4 w-4 text-primary" />
+                <AlertDescription>
+                  💡 <b>Demo credentials:</b> Email: <code>user@gmail.com</code> | Password: <code>user</code>
+                </AlertDescription>
+              </Alert>
             </Tabs>
 
             {error && (
