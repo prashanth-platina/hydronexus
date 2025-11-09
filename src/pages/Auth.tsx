@@ -124,7 +124,7 @@ const Auth = () => {
                     <Input
                       id="login-email"
                       type="email"
-                      placeholder="your@email.com"
+                      placeholder="for demo try:-'user@email.com'"
                       value={loginData.email}
                       onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
                       required
@@ -135,6 +135,7 @@ const Auth = () => {
                     <Input
                       id="login-password"
                       type="password"
+                      placeholder="for demo  try:- 'user'"
                       value={loginData.password}
                       onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
                       required
