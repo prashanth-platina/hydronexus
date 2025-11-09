@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertCircle, Droplets } from 'lucide-react';
+import { AlertCircle, Droplets, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -18,7 +18,7 @@ const Auth = () => {
   const [loginData, setLoginData] = useState({ email: '', password: '' });
   const [signupData, setSignupData] = useState({ email: '', password: '', confirmPassword: '', fullName: '' });
 
-  // redirect if already logged in
+  // Redirect to dashboard if already logged in
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) navigate('/dashboard');
@@ -26,7 +26,7 @@ const Auth = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  // handle login
+  // Handle login form submit
   const handleLogin = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -54,7 +54,7 @@ const Auth = () => {
     setIsLoading(false);
   };
 
-  // handle signup
+  // Handle signup form submit
   const handleSignup = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -91,22 +91,50 @@ const Auth = () => {
     setIsLoading(false);
   };
 
-  // 👇 Auto-fill + Auto-login handler
-  const handleDemoLogin = () => {
+  // ✅ Handle demo account auto-login
+  const handleDemoLogin = async () => {
+    setIsLoading(true);
+    setError('');
+
+    // Auto-fill for visual feedback
     setLoginData({ email: 'user@gmail.com', password: 'user' });
+
     toast({
       title: "Demo account selected",
       description: "Logging in with demo credentials...",
     });
-    // wait a moment before submitting
-    setTimeout(() => {
-      handleLogin({ preventDefault: () => {} });
-    }, 1000);
+
+    // Wait briefly to simulate fill + login
+    setTimeout(async () => {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: 'user@gmail.com',
+        password: 'user',
+      });
+
+      if (error) {
+        setError(error.message);
+        toast({
+          title: "Login failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      toast({
+        title: "Welcome to Demo Dashboard!",
+        description: "Successfully logged in as demo user.",
+      });
+      navigate('/dashboard');
+      setIsLoading(false);
+    }, 400);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 to-secondary/10 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
+        {/* Logo + Title */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
             <Droplets className="h-12 w-12 text-primary mr-2" />
@@ -155,11 +183,19 @@ const Auth = () => {
                       required
                     />
                   </div>
+                  
+                  {/* Login Button */}
                   <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? 'Signing In...' : 'Sign In'}
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" /> Signing In...
+                      </>
+                    ) : (
+                      'Sign In'
+                    )}
                   </Button>
 
-                  {/* 👇 Auto-fill + Auto-login button */}
+                  {/* 👇 Auto-Fill + Auto-Login Demo Button */}
                   <Button
                     type="button"
                     variant="outline"
@@ -167,7 +203,13 @@ const Auth = () => {
                     onClick={handleDemoLogin}
                     disabled={isLoading}
                   >
-                    Use Demo Account
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" /> Logging In...
+                      </>
+                    ) : (
+                      'Use Demo Account'
+                    )}
                   </Button>
                 </form>
               </TabsContent>
@@ -217,12 +259,18 @@ const Auth = () => {
                     />
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? 'Creating Account...' : 'Create Account'}
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" /> Creating Account...
+                      </>
+                    ) : (
+                      'Create Account'
+                    )}
                   </Button>
                 </form>
               </TabsContent>
 
-              {/* ---------- INFO ALERT ---------- */}
+              {/* ---------- INFO ALERT BELOW TABS ---------- */}
               <Alert className="mt-4 border-primary/30 bg-primary/5">
                 <AlertCircle className="h-4 w-4 text-primary" />
                 <AlertDescription>
@@ -231,6 +279,7 @@ const Auth = () => {
               </Alert>
             </Tabs>
 
+            {/* Error Alert */}
             {error && (
               <Alert variant="destructive" className="mt-4">
                 <AlertCircle className="h-4 w-4" />
